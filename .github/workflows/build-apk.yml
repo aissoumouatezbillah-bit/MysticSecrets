@@ -3,6 +3,8 @@ name: Build MysticSecrets APK
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     paths:
       - 'MysticSecrets_Android_Project.zip'
       - '.github/workflows/build-apk.yml'
@@ -12,7 +14,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,26 +28,32 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 'latest'
+          accept-android-sdk-licenses: true
 
       - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+        run: |
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Extract Android project
         run: |
-          test -f MysticSecrets_Android_Project.zip
-          mkdir -p source
+          mkdir source
           unzip -q MysticSecrets_Android_Project.zip -d source
           test -f source/settings.gradle
+          test -f source/app/build.gradle
 
       - name: Build debug APK
         working-directory: source
         run: gradle --no-daemon assembleDebug
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MysticSecrets-debug-APK
           path: source/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          retention-days: 7
           
